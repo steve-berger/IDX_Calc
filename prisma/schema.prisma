@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Customer {
+  id              String     @id @default(cuid())
+  name            String
+  defaultIndexKey String     @default("VPI_2020")
+  notes           String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  caseFiles       CaseFile[]
+}
+
+model CaseFile {
+  id           String   @id @default(cuid())
+  customerId   String
+  title        String
+  contractDate DateTime
+  initialValue Float
+  indexKey      String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
+model VpiDataPoint {
+  id       Int    @id @default(autoincrement())
+  indexKey  String
+  period   String // "YYYY-MM"
+  value    Float
+
+  @@unique([indexKey, period])
+  @@index([indexKey])
+}
+
+model VpiSyncLog {
+  id        Int      @id @default(autoincrement())
+  indexKey   String
+  syncedAt  DateTime @default(now())
+  rowCount  Int
+  success   Boolean
+
+  @@index([indexKey])
+}

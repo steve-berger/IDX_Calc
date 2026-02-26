@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - idx-data:/data
+    environment:
+      - DATABASE_URL=file:/data/app.db
+      - INDEX_PROVIDER=db
+
+volumes:
+  idx-data:

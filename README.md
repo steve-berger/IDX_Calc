@@ -1,36 +1,121 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# IDX Calc – Wertsicherungsrechner Österreich
 
-## Getting Started
+Web-App zur Verwaltung von Kunden, Akten und der jährlichen Indexanpassung (Wertsicherung) auf Basis des Verbraucherpreisindex (VPI) für Österreich.
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** (App Router) + React 19 + TypeScript
+- **TailwindCSS 4** für Styling
+- **Prisma 7** + SQLite für Persistenz
+- **Zod** für Validierung
+- **Vitest** für Tests
+
+## Setup
 
 ```bash
+# 1. Abhängigkeiten installieren
+npm install
+
+# 2. Prisma Client generieren
+npx prisma generate
+
+# 3. Datenbank erstellen / Migrationen anwenden
+npx prisma db push
+
+# 4. Seed-Daten laden (3 Beispielkunden mit Akten)
+npx tsx prisma/seed.mts
+
+# 5. Dev Server starten
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App öffnen: [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Projektstruktur
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+├── app/
+│   ├── actions/           # Server Actions (CRUD)
+│   │   ├── customers.ts
+│   │   └── case-files.ts
+│   ├── api/
+│   │   └── index-data/    # API Route für Indexdaten
+│   ├── customers/         # Kundenliste, Detail, Bearbeiten
+│   │   ├── [id]/
+│   │   │   ├── cases/     # Akten: Detail, Neu, Bearbeiten
+│   │   │   │   └── [caseId]/
+│   │   │   │       └── case-calculation.tsx  # Berechnungs-UI
+│   │   │   ├── edit/
+│   │   │   └── page.tsx   # Kundendetail
+│   │   ├── new/
+│   │   └── page.tsx       # Kundenliste
+│   ├── layout.tsx
+│   └── page.tsx           # Startseite
+├── components/
+│   ├── ui/                # Button, Input, Select, Textarea
+│   ├── customer-form.tsx
+│   └── case-file-form.tsx
+├── lib/
+│   ├── __tests__/
+│   │   └── calculation.test.ts
+│   ├── index-provider/
+│   │   ├── types.ts       # IndexDataProvider Interface
+│   │   ├── mock-provider.ts
+│   │   ├── mock-data.ts   # Statische VPI-Daten
+│   │   ├── api-provider.ts # API Provider (mit Fallback)
+│   │   └── index.ts
+│   ├── calculation.ts     # Berechnungslogik
+│   ├── db.ts              # Prisma Client Singleton
+│   └── schemas.ts         # Zod Schemas
+└── generated/prisma/      # Generierter Prisma Client
+prisma/
+├── schema.prisma
+├── migrations/
+└── seed.mts
+```
 
-## Learn More
+## Datenmodell
 
-To learn more about Next.js, take a look at the following resources:
+- **Customer**: id, name, contractDate, defaultIndexKey, notes
+- **CaseFile**: id, customerId, title, initialValue, indexKey (optional → nutzt Customer default), notes
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Berechnungslogik
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+Preis_neu = Preis_alt × (Index_aktuell / Index_basis)
+```
 
-## Deploy on Vercel
+- **Basisperiode**: Monat/Jahr des Vertragsabschlussdatums (YYYY-MM)
+- **Index-Basis**: Indexwert zur Basisperiode
+- **Aktueller Index**: Wählbar per Dropdown (Standard: neuester verfügbarer Wert)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Angezeigt werden: neuer Wert, absolute Änderung, prozentuale Änderung.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Index Provider
+
+Das System nutzt ein `IndexDataProvider`-Interface mit zwei Implementierungen:
+
+1. **MockIndexProvider** (Standard): Statische VPI-Daten (VPI 2020, 2015, 2010) direkt im Code
+2. **ApiIndexProvider**: Versuch API-Abruf von Statistik Austria, Fallback auf Mock
+
+Konfiguration über `INDEX_PROVIDER` Environment-Variable:
+- `mock` (Standard): Statische Daten
+- `api`: API mit Fallback
+
+## Tests
+
+```bash
+npm test          # Einmalig
+npm run test:watch # Watch mode
+```
+
+## Verfügbare Scripts
+
+| Script | Beschreibung |
+|--------|-------------|
+| `npm run dev` | Next.js Dev Server |
+| `npm run build` | Production Build |
+| `npm test` | Vitest Tests ausführen |
+| `npm run db:seed` | Seed-Daten laden |
+| `npm run db:migrate` | Prisma Migrationen |
