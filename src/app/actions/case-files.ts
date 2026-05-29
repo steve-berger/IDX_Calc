@@ -5,10 +5,15 @@ import { prisma } from "@/lib/db";
 import { caseFileSchema } from "@/lib/schemas";
 
 export async function getCaseFile(id: string) {
-  return prisma.caseFile.findUnique({
-    where: { id },
-    include: { customer: true },
-  });
+  try {
+    return await prisma.caseFile.findUnique({
+      where: { id },
+      include: { customer: true },
+    });
+  } catch (err) {
+    console.error("[getCaseFile]", err);
+    return null;
+  }
 }
 
 export async function createCaseFile(customerId: string, formData: FormData) {
@@ -25,16 +30,21 @@ export async function createCaseFile(customerId: string, formData: FormData) {
     return { error: parsed.error.issues.map((i) => i.message).join(", ") };
   }
 
-  await prisma.caseFile.create({
-    data: {
-      customerId,
-      title: parsed.data.title,
-      contractDate: new Date(parsed.data.contractDate),
-      initialValue: parsed.data.initialValue,
-      indexKey: parsed.data.indexKey || null,
-      notes: parsed.data.notes ?? null,
-    },
-  });
+  try {
+    await prisma.caseFile.create({
+      data: {
+        customerId,
+        title: parsed.data.title,
+        contractDate: new Date(parsed.data.contractDate),
+        initialValue: parsed.data.initialValue,
+        indexKey: parsed.data.indexKey || null,
+        notes: parsed.data.notes ?? null,
+      },
+    });
+  } catch (err) {
+    console.error("[createCaseFile]", err);
+    return { error: "Fall konnte nicht angelegt werden." };
+  }
 
   revalidatePath(`/customers/${customerId}`);
   return { success: true };
@@ -58,16 +68,21 @@ export async function updateCaseFile(
     return { error: parsed.error.issues.map((i) => i.message).join(", ") };
   }
 
-  await prisma.caseFile.update({
-    where: { id },
-    data: {
-      title: parsed.data.title,
-      contractDate: new Date(parsed.data.contractDate),
-      initialValue: parsed.data.initialValue,
-      indexKey: parsed.data.indexKey || null,
-      notes: parsed.data.notes ?? null,
-    },
-  });
+  try {
+    await prisma.caseFile.update({
+      where: { id },
+      data: {
+        title: parsed.data.title,
+        contractDate: new Date(parsed.data.contractDate),
+        initialValue: parsed.data.initialValue,
+        indexKey: parsed.data.indexKey || null,
+        notes: parsed.data.notes ?? null,
+      },
+    });
+  } catch (err) {
+    console.error("[updateCaseFile]", err);
+    return { error: "Fall konnte nicht aktualisiert werden." };
+  }
 
   revalidatePath(`/customers/${customerId}`);
   revalidatePath(`/customers/${customerId}/cases/${id}`);
@@ -75,7 +90,12 @@ export async function updateCaseFile(
 }
 
 export async function deleteCaseFile(id: string, customerId: string) {
-  await prisma.caseFile.delete({ where: { id } });
+  try {
+    await prisma.caseFile.delete({ where: { id } });
+  } catch (err) {
+    console.error("[deleteCaseFile]", err);
+    return { error: "Fall konnte nicht gelöscht werden." };
+  }
   revalidatePath(`/customers/${customerId}`);
   return { success: true };
 }

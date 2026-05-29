@@ -16,6 +16,7 @@ export const INDEX_LABELS: Record<string, string> = {
   VPI_2010: "VPI 2010 (Basis 2010=100)",
   VPI_2005: "VPI 2005 (Basis 2005=100)",
   VPI_2000: "VPI 2000 (Basis 2000=100)",
+  // VPI_2025: not yet published by Statistik Austria
 };
 
 export function getIndexLabel(key: string): string {

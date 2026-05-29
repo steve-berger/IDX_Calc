@@ -7,9 +7,7 @@ import { customerSchema } from "@/lib/schemas";
 const PAGE_SIZE = 10;
 
 export async function getCustomers(search?: string, page = 1) {
-  const where = search
-    ? { name: { contains: search } }
-    : {};
+  const where = search ? { name: { contains: search } } : {};
   const [customers, total] = await Promise.all([
     prisma.customer.findMany({
       where,
@@ -44,13 +42,18 @@ export async function createCustomer(formData: FormData) {
     return { error: parsed.error.issues.map((i) => i.message).join(", ") };
   }
 
-  await prisma.customer.create({
-    data: {
-      name: parsed.data.name,
-      defaultIndexKey: parsed.data.defaultIndexKey,
-      notes: parsed.data.notes ?? null,
-    },
-  });
+  try {
+    await prisma.customer.create({
+      data: {
+        name: parsed.data.name,
+        defaultIndexKey: parsed.data.defaultIndexKey,
+        notes: parsed.data.notes ?? null,
+      },
+    });
+  } catch (err) {
+    console.error("[createCustomer]", err);
+    return { error: "Kunde konnte nicht angelegt werden." };
+  }
 
   revalidatePath("/customers");
   return { success: true };
@@ -68,14 +71,19 @@ export async function updateCustomer(id: string, formData: FormData) {
     return { error: parsed.error.issues.map((i) => i.message).join(", ") };
   }
 
-  await prisma.customer.update({
-    where: { id },
-    data: {
-      name: parsed.data.name,
-      defaultIndexKey: parsed.data.defaultIndexKey,
-      notes: parsed.data.notes ?? null,
-    },
-  });
+  try {
+    await prisma.customer.update({
+      where: { id },
+      data: {
+        name: parsed.data.name,
+        defaultIndexKey: parsed.data.defaultIndexKey,
+        notes: parsed.data.notes ?? null,
+      },
+    });
+  } catch (err) {
+    console.error("[updateCustomer]", err);
+    return { error: "Kunde konnte nicht aktualisiert werden." };
+  }
 
   revalidatePath(`/customers/${id}`);
   revalidatePath("/customers");
@@ -83,7 +91,12 @@ export async function updateCustomer(id: string, formData: FormData) {
 }
 
 export async function deleteCustomer(id: string) {
-  await prisma.customer.delete({ where: { id } });
+  try {
+    await prisma.customer.delete({ where: { id } });
+  } catch (err) {
+    console.error("[deleteCustomer]", err);
+    return { error: "Kunde konnte nicht gelöscht werden." };
+  }
   revalidatePath("/customers");
   return { success: true };
 }

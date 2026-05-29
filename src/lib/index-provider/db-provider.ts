@@ -6,6 +6,7 @@ import { parseVpiCsv } from "./csv-parser";
 const STALE_AFTER_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export class DbIndexProvider implements IndexDataProvider {
+  private readonly refreshingKeys = new Set<string>();
   getSupportedIndices(): string[] {
     return Object.keys(VPI_CSV_URLS);
   }
@@ -54,12 +55,15 @@ export class DbIndexProvider implements IndexDataProvider {
    * Fire-and-forget background refresh. Checks the last sync time and
    * re-fetches from Statistik Austria if data is older than 24 hours.
    * Serves stale data immediately — the user never waits.
+   * A per-key lock prevents duplicate concurrent fetches.
    */
   private triggerRefreshIfStale(indexKey: string): void {
+    if (this.refreshingKeys.has(indexKey)) return;
     void this.refreshIfStale(indexKey);
   }
 
   private async refreshIfStale(indexKey: string): Promise<void> {
+    this.refreshingKeys.add(indexKey);
     try {
       const lastSync = await prisma.vpiSyncLog.findFirst({
         where: { indexKey, success: true },
@@ -95,6 +99,8 @@ export class DbIndexProvider implements IndexDataProvider {
       console.log(`[DbIndexProvider] Refreshed ${indexKey}: ${dataPoints.length} rows`);
     } catch (err) {
       console.warn(`[DbIndexProvider] Background refresh failed for ${indexKey}:`, err);
+    } finally {
+      this.refreshingKeys.delete(indexKey);
     }
   }
 }
